@@ -29,28 +29,32 @@ submissions.on("submission", submission => {
     const url = submission.url;
     const id = submission.id;
     const html = submission.media.oembed.html;
-    const src = html.match(/src\=([^\s]*)\s/)[0];
-    let uri = src.match(/"((?:\\.|[^"\\])*)"/)[0];
-    uri = decodeURIComponent(uri).replace(/"/g, "");
-    const streamableEmail = process.env.STREAMABLE_EMAIL;
-    const streamablePass = process.env.STREAMABLE_PASSWORD;
-    const streamableUrl =
-      "https://api.streamable.com/import?url=" + encodeURIComponent(uri);
-    console.log(streamableUrl);
-    const auth = "-u " + streamableEmail;
-    axios({
-      method: "get",
-      url: streamableUrl,
-      auth: {
-        username: streamableEmail,
-        password: streamablePass
-      }
-    })
-      .then(response => {
-        const shortcode = response.data.shortcode;
-        const replyUrl = "https://streamable.com/" + shortcode;
-        r.getSubmission(id).reply(replyUrl);
+    if (html.indexOf("iframe") !== -1) {
+      const src = html.match(/src\=([^\s]*)\s/)[0];
+      let uri = src.match(/"((?:\\.|[^"\\])*)"/)[0];
+      uri = decodeURIComponent(uri).replace(/"/g, "");
+      const streamableEmail = process.env.STREAMABLE_EMAIL;
+      const streamablePass = process.env.STREAMABLE_PASSWORD;
+      const streamableUrl =
+        "https://api.streamable.com/import?url=" + encodeURIComponent(uri);
+      axios({
+        method: "get",
+        url: streamableUrl,
+        headers: { "User-Agent": "Bouldering Insta Bot v1.0" },
+        auth: {
+          username: streamableEmail,
+          password: streamablePass
+        }
       })
-      .catch(error => console.log(error));
+        .then(response => {
+          if (response.data.shortcode) {
+            const shortcode = response.data.shortcode;
+            const replyUrl = "https://streamable.com/" + shortcode;
+            const replyString = `This is an automated message, your video has been uploaded to streamable to provide a better desktop experience. ${replyUrl}`;
+            r.getSubmission(id).reply(replyString);
+          }
+        })
+        .catch(error => console.log(error));
+    }
   }
 });
